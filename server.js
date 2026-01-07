@@ -820,8 +820,19 @@ function createNotification(user_email, type, title, message, related_id = null)
     }
 }
 
+// Serve static files in production
+const distPath = join(__dirname, 'dist');
+app.use(express.static(distPath));
+
+// Handle SPA routing - return index.html for any unknown route
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(join(distPath, 'index.html'));
+    }
+});
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 InHouse API running on http://localhost:${PORT}`);
     console.log(`📊 Database: ${DB_PATH}`);
     console.log(`✅ Ready to accept requests`);
