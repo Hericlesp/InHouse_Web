@@ -7,98 +7,65 @@ import './ChatView.css';
 const ChatView = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [chats, setChats] = useState([]);
+    const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadChats();
+        loadConversations();
     }, []);
 
-    const loadChats = async () => {
-        if (!user) return;
-
+    const loadConversations = async () => {
         try {
-            setLoading(true);
             const data = await chatApi.getChats(user.email);
-            setChats(data);
+            setConversations(data);
         } catch (error) {
-            console.error('Failed to load chats:', error);
+            console.error('Error loading conversations:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const formatTime = (timestamp) => {
-        if (!timestamp) return '';
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-
-        if (diff < 60000) return 'Agora';
-        if (diff < 3600000) return `${Math.floor(diff / 60000)}min`;
-        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
-        return date.toLocaleDateString('pt-BR');
-    };
-
-    if (loading) {
-        return (
-            <div className="chat-view">
-                <div className="loading-state">
-                    <div className="spinner"></div>
-                    <p>Carregando conversas...</p>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return <div className="loading">Carregando conversas...</div>;
 
     return (
-        <div className="chat-view">
-            <div className="chat-header">
-                <h1>Mensagens</h1>
-                <p className="chat-subtitle">{chats.length} conversas</p>
+        <div className="chat-view-container">
+            <div className="conversations-header">
+                <h2>Mensagens</h2>
             </div>
 
-            {chats.length > 0 ? (
-                <div className="chats-list">
-                    {chats.map(chat => (
+            <div className="conversations-list-full">
+                {conversations.length === 0 ? (
+                    <div className="empty-chat">
+                        <span className="empty-icon">💬</span>
+                        <p>Nenhuma conversa iniciada ainda.</p>
+                        <p className="subtitle">Interaja com proprietários no Marketplace para começar!</p>
+                    </div>
+                ) : (
+                    conversations.map(conv => (
                         <div
-                            key={chat.id}
-                            className="chat-item"
-                            onClick={() => navigate(`/messages/${chat.id}`)}
+                            key={conv.id}
+                            className="conversation-card"
+                            onClick={() => navigate(`/messages/${conv.id}`)}
                         >
-                            <div className="chat-avatar">
-                                {chat.other_user_email.charAt(0).toUpperCase()}
+                            <div className="conv-avatar">
+                                {conv.other_user_email.charAt(0).toUpperCase()}
                             </div>
-                            <div className="chat-content">
-                                <div className="chat-top">
-                                    <span className="chat-name">{chat.other_user_email}</span>
-                                    <span className="chat-time">
-                                        {formatTime(chat.last_message_time)}
+                            <div className="conv-details">
+                                <div className="conv-row">
+                                    <span className="conv-user">{conv.other_user_email}</span>
+                                    <span className="conv-date">
+                                        {conv.last_message_time ? new Date(conv.last_message_time).toLocaleDateString() : ''}
                                     </span>
                                 </div>
-                                <div className="chat-message">
-                                    {chat.last_message || 'Inicie uma conversa'}
-                                </div>
+                                <p className="conv-last-msg">
+                                    {conv.last_message || 'Inicie a conversa...'}
+                                </p>
                             </div>
+                            <div className="conv-arrow">›</div>
                         </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="empty-state">
-                    <div className="empty-icon">💬</div>
-                    <h2>Nenhuma conversa ainda</h2>
-                    <p>
-                        Quando você iniciar conversas com proprietários ou interessados,
-                        elas aparecerão aqui.
-                    </p>
-                    <button
-                        className="btn-primary"
-                        onClick={() => navigate('/marketplace')}
-                    >
-                        Explorar Imóveis
-                    </button>
-                </div>
-            )}
+                    ))
+                )}
+            </div>
         </div>
     );
 };

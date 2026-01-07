@@ -89,70 +89,77 @@ function initDatabase() {
       interaction_type TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
-    CREATE TABLE IF NOT EXISTS leads (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL,
-      user_email TEXT NOT NULL,
-      user_name TEXT NOT NULL,
-      status TEXT DEFAULT 'Novo',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(property_id, user_email)
-    );
-
-    CREATE TABLE IF NOT EXISTS property_views (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL,
-      user_email TEXT,
-      viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_email TEXT NOT NULL,
-      type TEXT NOT NULL,
-      title TEXT,
-      message TEXT,
-      related_id INTEGER,
-      read BOOLEAN DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS chats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user1_email TEXT NOT NULL,
-      user2_email TEXT NOT NULL,
-      last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user1_email, user2_email)
-    );
-
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      chat_id INTEGER,
-      sender_email TEXT NOT NULL,
-      content TEXT,
-      message_type TEXT DEFAULT 'text',
-      related_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS leases (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_email TEXT NOT NULL,
-      property_id INTEGER NOT NULL,
-      status TEXT DEFAULT 'Active'
-    );
   `);
+
+    // Tables for Owner Dashboard
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_id INTEGER,
+            user_email TEXT,
+            user_name TEXT,
+            status TEXT DEFAULT 'Novo',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(property_id, user_email)
+        )
+    `);
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS property_views (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_id INTEGER,
+            user_email TEXT,
+            viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS notifications(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT,
+            message TEXT,
+            related_id INTEGER,
+            read BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS chats(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user1_email TEXT NOT NULL,
+            user2_email TEXT NOT NULL,
+            last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user1_email, user2_email)
+        );
+
+        CREATE TABLE IF NOT EXISTS messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_id INTEGER,
+            sender_email TEXT NOT NULL,
+            content TEXT,
+            message_type TEXT DEFAULT 'text',
+            related_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS leases(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            property_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'Active'
+        );
+    `);
 
     // Seed default user if not exists
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get('admin@inhouse.com');
 
     if (!user) {
         db.prepare(`
-      INSERT INTO users (name, email, password_hash, points, stars, user_type, verified) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run('Justino Admin', 'admin@inhouse.com', 'admin', 150, 4.8, 'owner', 1);
+      INSERT INTO users(name, email, password_hash, points, stars, user_type, verified)
+    VALUES(?, ?, ?, ?, ?, ?, ?)
+        `).run('Justino Admin', 'admin@inhouse.com', 'admin', 150, 4.8, 'owner', 1);
 
         // Seed properties with new fields
         const properties = [
@@ -163,8 +170,8 @@ function initDatabase() {
         ];
 
         const insertProperty = db.prepare(`
-      INSERT INTO properties (owner_email, title, address, neighborhood, city, state, country, price, type, condo_fee, iptu, accepts_pets, is_furnished, guarantee_type, availability_date, description, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')
+      INSERT INTO properties(owner_email, title, address, neighborhood, city, state, country, price, type, condo_fee, iptu, accepts_pets, is_furnished, guarantee_type, availability_date, description, status)
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')
     `);
 
         properties.forEach(p => insertProperty.run(...p));
@@ -203,7 +210,7 @@ function initDatabase() {
             newColumns.forEach(col => {
                 if (!existingColumns.includes(col.name)) {
                     console.log(`🔄 Running migration: Adding ${col.name} column...`);
-                    db.exec(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`);
+                    db.exec(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def} `);
                     console.log(`✅ Migration completed: ${col.name} column added`);
                 }
             });
@@ -253,8 +260,8 @@ app.post('/api/auth/signup', (req, res) => {
 
     try {
         const result = db.prepare(`
-      INSERT INTO users (name, email, password_hash, points, stars, user_type)
-      VALUES (?, ?, ?, 0, 5.0, ?)
+      INSERT INTO users(name, email, password_hash, points, stars, user_type)
+    VALUES(?, ?, ?, 0, 5.0, ?)
     `).run(name, email, password, user_type || 'tenant');
 
         const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
@@ -332,7 +339,7 @@ app.put('/api/users/profile', (req, res) => {
 
         values.push(email);
 
-        const stmt = db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE email = ?`);
+        const stmt = db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE email = ? `);
         const result = stmt.run(...values);
 
         if (result.changes === 0) {
@@ -360,12 +367,12 @@ app.get('/api/properties', (req, res) => {
 
     if (city) {
         query += " AND city LIKE ?";
-        params.push(`%${city}%`);
+        params.push(`% ${city}% `);
     }
 
     if (neighborhood) {
         query += " AND neighborhood LIKE ?";
-        params.push(`%${neighborhood}%`);
+        params.push(`% ${neighborhood}% `);
     }
 
     if (type) {
@@ -396,11 +403,11 @@ app.post('/api/properties', (req, res) => {
 
     try {
         const result = db.prepare(`
-            INSERT INTO properties (
-                owner_email, title, address, neighborhood, city, state, country,
-                price, type, condo_fee, iptu, accepts_pets, is_furnished,
-                guarantee_type, availability_date, description, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO properties(
+        owner_email, title, address, neighborhood, city, state, country,
+        price, type, condo_fee, iptu, accepts_pets, is_furnished,
+        guarantee_type, availability_date, description, status
+    ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
             owner_email, title, address, neighborhood, city, state, country || 'Brasil',
             price, type, condo_fee || 0, iptu || 0, accepts_pets ? 1 : 0, is_furnished ? 1 : 0,
@@ -500,12 +507,12 @@ app.get('/api/favorites', (req, res) => {
     }
 
     const favorites = db.prepare(`
-        SELECT f.*, p.* 
+        SELECT f.*, p.*
         FROM favorites f
         JOIN properties p ON f.property_id = p.id
         WHERE f.user_email = ?
         ORDER BY f.created_at DESC
-    `).all(user_email);
+            `).all(user_email);
 
     return res.status(200).json(favorites);
 });
@@ -533,13 +540,13 @@ app.get('/api/interactions/stats/:propertyId', (req, res) => {
     const { propertyId } = req.params;
 
     const stats = db.prepare(`
-        SELECT 
-            interaction_type,
-            COUNT(*) as count
+    SELECT
+    interaction_type,
+        COUNT(*) as count
         FROM user_interactions
         WHERE property_id = ?
         GROUP BY interaction_type
-    `).all(propertyId);
+            `).all(propertyId);
 
     const favorites = db.prepare('SELECT COUNT(*) as count FROM favorites WHERE property_id = ?')
         .get(propertyId);
@@ -568,8 +575,8 @@ app.get('/api/owner/dashboard', (req, res) => {
             SELECT status, COUNT(*) as count 
             FROM properties 
             WHERE owner_email = ?
-            GROUP BY status
-        `).all(owner_email);
+        GROUP BY status
+            `).all(owner_email);
 
         // Total leads
         const leadsCount = db.prepare(`
@@ -652,16 +659,16 @@ app.get('/api/owner/leads', (req, res) => {
 
     try {
         const leads = db.prepare(`
-            SELECT 
-                l.*,
-                p.title as property_title,
-                p.price as property_price,
-                p.neighborhood as property_neighborhood
+            SELECT
+    l.*,
+        p.title as property_title,
+        p.price as property_price,
+        p.neighborhood as property_neighborhood
             FROM leads l
             JOIN properties p ON l.property_id = p.id
             WHERE p.owner_email = ?
-            ORDER BY l.created_at DESC
-        `).all(owner_email);
+        ORDER BY l.created_at DESC
+            `).all(owner_email);
 
         return res.status(200).json(leads);
     } catch (error) {
@@ -702,25 +709,25 @@ app.get('/api/chats', (req, res) => {
 
     try {
         const chats = db.prepare(`
-            SELECT 
-                c.*,
-                CASE 
+    SELECT
+    c.*,
+        CASE 
                     WHEN c.user1_email = ? THEN c.user2_email 
-                    ELSE c.user1_email 
-                END as other_user_email,
-                m.content as last_message,
-                m.created_at as last_message_time
+                    ELSE c.user1_email
+    END as other_user_email,
+        m.content as last_message,
+        m.created_at as last_message_time
             FROM chats c
             LEFT JOIN messages m ON m.chat_id = c.id 
                 AND m.id = (
-                    SELECT id FROM messages 
+        SELECT id FROM messages 
                     WHERE chat_id = c.id 
                     ORDER BY created_at DESC 
                     LIMIT 1
                 )
             WHERE c.user1_email = ? OR c.user2_email = ?
-            ORDER BY c.last_message_at DESC
-        `).all(user_email, user_email, user_email);
+        ORDER BY c.last_message_at DESC
+            `).all(user_email, user_email, user_email);
 
         return res.status(200).json(chats);
     } catch (error) {
@@ -740,9 +747,9 @@ app.post('/api/chats', (req, res) => {
     try {
         // Check if chat exists
         const existing = db.prepare(`
-            SELECT * FROM chats 
-            WHERE (user1_email = ? AND user2_email = ?) 
-               OR (user1_email = ? AND user2_email = ?)
+    SELECT * FROM chats
+    WHERE(user1_email = ? AND user2_email = ?)
+    OR(user1_email = ? AND user2_email = ?)
         `).get(user1_email, user2_email, user2_email, user1_email);
 
         if (existing) {
@@ -768,10 +775,10 @@ app.get('/api/chats/:id/messages', (req, res) => {
 
     try {
         const messages = db.prepare(`
-            SELECT * FROM messages 
-            WHERE chat_id = ? 
-            ORDER BY created_at ASC
-        `).all(id);
+    SELECT * FROM messages 
+            WHERE chat_id = ?
+        ORDER BY created_at ASC
+            `).all(id);
 
         return res.status(200).json(messages);
     } catch (error) {
@@ -790,8 +797,8 @@ app.post('/api/messages', (req, res) => {
 
     try {
         const result = db.prepare(`
-            INSERT INTO messages (chat_id, sender_email, content, message_type, related_id)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO messages(chat_id, sender_email, content, message_type, related_id)
+    VALUES(?, ?, ?, ?, ?)
         `).run(chat_id, sender_email, content, message_type || 'text', related_id);
 
         // Update chat last_message_at
@@ -817,10 +824,10 @@ app.get('/api/notifications', (req, res) => {
 
     try {
         const notifications = db.prepare(`
-            SELECT * FROM notifications 
-            WHERE user_email = ? 
-            ORDER BY created_at DESC
-        `).all(user_email);
+    SELECT * FROM notifications 
+            WHERE user_email = ?
+        ORDER BY created_at DESC
+            `).all(user_email);
 
         return res.status(200).json(notifications);
     } catch (error) {
@@ -848,8 +855,8 @@ app.put('/api/notifications/:id/read', (req, res) => {
 function createNotification(user_email, type, title, message, related_id = null) {
     try {
         db.prepare(`
-            INSERT INTO notifications (user_email, type, title, message, related_id)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO notifications(user_email, type, title, message, related_id)
+    VALUES(?, ?, ?, ?, ?)
         `).run(user_email, type, title, message, related_id);
     } catch (error) {
         console.error('Create notification error:', error);
