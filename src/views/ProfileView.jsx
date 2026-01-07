@@ -56,8 +56,23 @@ const ProfileView = () => {
         }
     };
 
+    // List of mandatory fields for general profile completion
+    const checkMandatoryFields = () => {
+        const required = ['name', 'phone', 'cpf', 'rg', 'zip_code', 'street', 'number', 'neighborhood', 'city', 'state', 'document_photo', 'selfie_with_document'];
+        const missing = required.filter(field => !formData[field]);
+        return missing;
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
+
+        // Validation for mandatory fields
+        const missingFields = checkMandatoryFields();
+        if (missingFields.length > 0 && activeTab !== 'professional') {
+            // We allow saving partial data, but maybe warn? 
+            // For now, let's just save but alert if they try to do major actions later
+        }
+
         setLoading(true);
         try {
             const result = await authApi.updateProfile({
@@ -256,30 +271,67 @@ const ProfileView = () => {
                     )}
 
                     {activeTab === 'address' && (
-                        <div className="form-group">
-                            <label>Endereço Completo</label>
-                            <input
-                                name="address"
-                                value={formData.address}
-                                onChange={handleInputChange}
-                                placeholder="Rua, Número, Bairro, Cidade - UF"
-                            />
-                        </div>
+                        <>
+                            <div className="form-group-row">
+                                <div className="form-group" style={{ flex: '1' }}>
+                                    <label>CEP *</label>
+                                    <input name="zip_code" value={formData.zip_code || ''} onChange={handleInputChange} placeholder="00000-000" />
+                                </div>
+                                <div className="form-group" style={{ flex: '2' }}>
+                                    <label>Cidade *</label>
+                                    <input name="city" value={formData.city || ''} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group" style={{ flex: '0.5' }}>
+                                    <label>UF *</label>
+                                    <input name="state" value={formData.state || ''} onChange={handleInputChange} maxLength="2" />
+                                </div>
+                            </div>
+
+                            <div className="form-group-row">
+                                <div className="form-group" style={{ flex: '3' }}>
+                                    <label>Rua / Logradouro *</label>
+                                    <input name="street" value={formData.street || ''} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group" style={{ flex: '1' }}>
+                                    <label>Número *</label>
+                                    <input name="number" value={formData.number || ''} onChange={handleInputChange} />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Bairro *</label>
+                                <input name="neighborhood" value={formData.neighborhood || ''} onChange={handleInputChange} />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Ponto de Referência (Opcional)</label>
+                                <input
+                                    name="complement"
+                                    value={formData.complement || ''}
+                                    onChange={handleInputChange}
+                                    placeholder="Próximo ao mercado..."
+                                />
+                            </div>
+                        </>
                     )}
 
                     {activeTab === 'professional' && (
                         <>
+                            <div className="info-banner">
+                                <span className="info-icon">ℹ️</span>
+                                <p>Estas informações são opcionais, mas tornam-se <strong>obrigatórias</strong> para entrar em contato com proprietários.</p>
+                            </div>
                             <div className="form-group">
                                 <label>Cargo / Profissão</label>
-                                <input name="job_title" value={formData.job_title} onChange={handleInputChange} />
+                                <input name="job_title" value={formData.job_title || ''} onChange={handleInputChange} />
                             </div>
                             <div className="form-group">
                                 <label>Empresa</label>
-                                <input name="company_name" value={formData.company_name} onChange={handleInputChange} />
+                                <input name="company_name" value={formData.company_name || ''} onChange={handleInputChange} />
                             </div>
                             <div className="form-group">
                                 <label>CNPJ (Opcional)</label>
-                                <input name="cnpj" value={formData.cnpj} onChange={handleInputChange} />
+                                <input name="cnpj" value={formData.cnpj || ''} onChange={handleInputChange} />
                             </div>
                             {renderFileUpload('income_proof', 'Comprovante de Renda')}
                         </>

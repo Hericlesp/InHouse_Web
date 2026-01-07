@@ -183,7 +183,15 @@ function initDatabase() {
                 { name: 'user_type', def: "TEXT DEFAULT 'tenant'" },
                 { name: 'cpf', def: "TEXT" },
                 { name: 'rg', def: "TEXT" },
-                { name: 'address', def: "TEXT" },
+                // Detailed Address Fields
+                { name: 'zip_code', def: "TEXT" },
+                { name: 'street', def: "TEXT" },
+                { name: 'number', def: "TEXT" },
+                { name: 'neighborhood', def: "TEXT" },
+                { name: 'city', def: "TEXT" },
+                { name: 'state', def: "TEXT" },
+                { name: 'complement', def: "TEXT" }, // Reference point
+
                 { name: 'job_title', def: "TEXT" },
                 { name: 'company_name', def: "TEXT" },
                 { name: 'cnpj', def: "TEXT" },
@@ -216,25 +224,21 @@ initDatabase();
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
-    }
+    try {
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ? AND password_hash = ?')
-        .get(email, password);
+        if (!user || user.password_hash !== password) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
-    if (user) {
         const { password_hash, ...userData } = user;
         return res.status(200).json({
             success: true,
             user: userData
         });
+    } catch (error) {
+        return res.status(500).json({ error: 'Server error' });
     }
-
-    return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-    });
 });
 
 // Auth - Signup
@@ -278,56 +282,72 @@ app.post('/api/auth/signup', (req, res) => {
     }
 });
 
-// Posts - Get all
-app.get('/api/posts', (req, res) => {
-    const posts = db.prepare('SELECT * FROM posts ORDER BY id DESC').all();
-    return res.status(200).json(posts);
-});
+// Users - Update Profile
+app.put('/api/users/profile', (req, res) => {
+    const {
+        email, name, phone, cpf, rg,
+        zip_code, street, number, neighborhood, city, state, complement,
+        job_title, company_name, cnpj,
+        income_proof, document_photo, selfie_with_document,
+        user_type // Allow toggling user type
+    } = req.body;
 
-// Posts - Create
-app.post('/api/posts', (req, res) => {
-    const { author, time, type, content, image, media_type, tagged_property_id } = req.body;
-
-    if (!author || !content) {
-        return res.status(400).json({ error: 'Author and content required' });
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
     }
 
     try {
-        const result = db.prepare(`
-      INSERT INTO posts (author, time, type, content, image, media_type, tagged_property_id, likes, liked_by_me)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)
-    `).run(author, time || 'Just now', type || 'Update', content, image, media_type, tagged_property_id);
+        // Construct update query dynamically
+        const updates = [];
+        const values = [];
 
-        const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(result.lastInsertRowid);
+        if (name) { updates.push('name = ?'); values.push(name); }
+        if (phone) { updates.push('phone = ?'); values.push(phone); }
+        if (cpf) { updates.push('cpf = ?'); values.push(cpf); }
+        if (rg) { updates.push('rg = ?'); values.push(rg); }
 
-        return res.status(201).json(post);
-    } catch (error) {
-        return res.status(500).json({ error: 'Server error' });
-    }
-});
+        // Address fields
+        if (zip_code) { updates.push('zip_code = ?'); values.push(zip_code); }
+        if (street) { updates.push('street = ?'); values.push(street); }
+        if (number) { updates.push('number = ?'); values.push(number); }
+        if (neighborhood) { updates.push('neighborhood = ?'); values.push(neighborhood); }
+        if (city) { updates.push('city = ?'); values.push(city); }
+        if (state) { updates.push('state = ?'); values.push(state); }
+        if (complement) { updates.push('complement = ?'); values.push(complement); }
 
-// Posts - Like teste001
-app.post('/api/posts/:id/like', (req, res) => {
-    const { id } = req.params;
-    const { liked } = req.body;
+        if (job_title) { updates.push('job_title = ?'); values.push(job_title); }
+        if (company_name) { updates.push('company_name = ?'); values.push(company_name); }
+        if (cnpj) { updates.push('cnpj = ?'); values.push(cnpj); }
 
-    try {
-        const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(id);
+        // Handle file/image strings
+        if (income_proof) { updates.push('income_proof = ?'); values.push(income_proof); }
+        if (document_photo) { updates.push('document_photo = ?'); values.push(document_photo); }
+        if (selfie_with_document) { updates.push('selfie_with_document = ?'); values.push(selfie_with_document); }
 
-        if (!post) {
-            return res.status(404).json({ error: 'Post not found' });
+        if (user_type) { updates.push('user_type = ?'); values.push(user_type); }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'No fields to update' });
         }
 
-        const newLikes = liked ? post.likes + 1 : post.likes - 1;
+        values.push(email);
 
-        db.prepare('UPDATE posts SET likes = ?, liked_by_me = ? WHERE id = ?')
-            .run(newLikes, liked ? 1 : 0, id);
+        const stmt = db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE email = ?`);
+        const result = stmt.run(...values);
 
-        const updatedPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(id);
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
 
-        return res.status(200).json(updatedPost);
+        // Return updated user
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        const { password_hash, ...userData } = user;
+
+        return res.status(200).json({ success: true, user: userData });
+
     } catch (error) {
-        return res.status(500).json({ error: 'Server error' });
+        console.error('Update profile error:', error);
+        return res.status(500).json({ error: 'Server error: ' + error.message });
     }
 });
 
