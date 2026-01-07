@@ -179,16 +179,41 @@
 
 .tabs {
     display: flex;
-    gap: 1rem;
+    gap: 2rem;
+    /* Increased gap for cleaner look */
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 2rem;
     overflow-x: auto;
     /* Allow horizontal scroll for tabs on small screens */
-    padding-bottom: 0.5rem;
-    /* Space for scrollbar */
+    padding-bottom: 1px;
+    /* Avoid border clash */
     white-space: nowrap;
     scrollbar-width: thin;
     /* Firefox */
+}
+
+.tab {
+    background: none;
+    border: none;
+    padding: 0.75rem 0;
+    /* Remove horizontal padding to look like text links */
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab:hover {
+    color: var(--text-primary);
+}
+
+.tab.active {
+    color: var(--pink-500);
+    border-bottom-color: var(--pink-500);
+    font-weight: 600;
 }
 
 /* Form Layout Improvements */
