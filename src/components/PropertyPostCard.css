@@ -1,0 +1,180 @@
+.property-post-card {
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--pink-200);
+    box-shadow: 0 4px 6px rgba(219, 39, 119, 0.1);
+}
+
+[data-theme="dark"] .property-post-card {
+    border-color: var(--pink-800);
+}
+
+.post-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    margin: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.post-type-badge.property {
+    background: linear-gradient(135deg, var(--pink-500), var(--pink-600));
+    color: white;
+}
+
+.post-type-badge.announcement {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.post-type-badge.educational {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+/* Property Image */
+.property-post-image {
+    width: 100%;
+    height: 280px;
+    position: relative;
+    background-color: var(--bg-primary);
+    overflow: hidden;
+}
+
+.property-post-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.property-post-image.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+}
+
+.placeholder-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.status-overlay {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+/* Property Info */
+.property-post-info {
+    padding: 1.5rem;
+}
+
+.property-post-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.property-post-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--pink-500);
+    margin-bottom: 0.5rem;
+}
+
+.property-post-location {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.property-post-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.property-post-badges .badge {
+    padding: 0.375rem 0.75rem;
+    background-color: rgba(219, 39, 119, 0.1);
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    color: var(--pink-600);
+    font-weight: 600;
+}
+
+[data-theme="dark"] .property-post-badges .badge {
+    color: var(--pink-400);
+}
+
+/* Actions */
+.property-post-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-interest,
+.btn-view-details {
+    flex: 1;
+    padding: 0.875rem;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    font-size: 0.9375rem;
+}
+
+.btn-interest {
+    background-color: var(--pink-500);
+    color: white;
+}
+
+.btn-interest:hover {
+    background-color: var(--pink-600);
+    transform: translateY(-1px);
+}
+
+.btn-interest.interested {
+    background-color: #22c55e;
+}
+
+.btn-view-details {
+    background-color: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-view-details:hover {
+    border-color: var(--pink-500);
+    color: var(--pink-500);
+}
+
+/* Message */
+.property-post-message {
+    padding: 1rem 1.5rem;
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+}
+
+.property-post-message p {
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+}
