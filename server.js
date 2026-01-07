@@ -290,7 +290,7 @@ app.post('/api/posts', (req, res) => {
     }
 });
 
-// Posts - Like
+// Posts - Like teste001
 app.post('/api/posts/:id/like', (req, res) => {
     const { id } = req.params;
     const { liked } = req.body;
