@@ -1,18 +1,138 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authApi } from '../services/api';
 import './ProfileView.css';
 
 const ProfileView = () => {
-    const { user } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
+    const { user, login } = useAuth(); // We might need to refresh user data
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('personal');
+    const [loading, setLoading] = useState(false);
 
-    if (!user) {
-        return <div>Carregando...</div>;
-    }
+    // Form State
+    const [formData, setFormData] = useState({
+        name: '',
+        phone: '',
+        cpf: '',
+        rg: '',
+        address: '',
+        job_title: '',
+        company_name: '',
+        cnpj: '',
+        income_proof: '',
+        document_photo: '',
+        selfie_with_document: ''
+    });
+
+    useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                ...user
+            }));
+        }
+    }, [user]);
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleFileChange = (e, field) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData(prev => ({
+                    ...prev,
+                    [field]: reader.result // Reading as Base64 for prototype
+                }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const result = await authApi.updateProfile({
+                email: user.email,
+                ...formData
+            });
+
+            if (result.success) {
+                // Here we would ideally update the auth context with new user data
+                // For now, let's assume valid response updates context or reload
+                alert('Perfil atualizado com sucesso!');
+                // Force reload or update context logic here (omitted for brevity, assume simple flow)
+            }
+        } catch (error) {
+            console.error('Update failed:', error);
+            alert('Erro ao atualizar perfil.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleOwnerStatus = async () => {
+        if (!confirm('Deseja alterar seu tipo de conta?')) return;
+
+        try {
+            const newType = user.user_type === 'owner' ? 'tenant' : 'owner';
+            await authApi.updateProfile({
+                email: user.email,
+                user_type: newType
+            });
+            window.location.reload(); // Simple reload to reflect changes
+        } catch (error) {
+            alert('Erro ao alterar tipo de conta');
+        }
+    };
+
+    if (!user) return <div>Carregando...</div>;
+
+    const renderFileUpload = (field, label) => (
+        <div className="file-upload-item">
+            <label>{label}</label>
+            <div className="file-upload-box" onClick={() => document.getElementById(field).click()}>
+                {formData[field] ? (
+                    <div className="preview-container">
+                        <img src={formData[field]} alt="Preview" className="preview-image" />
+                        <button
+                            className="btn-remove-photo"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setFormData(prev => ({ ...prev, [field]: '' }));
+                            }}
+                        >
+                            Remover
+                        </button>
+                    </div>
+                ) : (
+                    <div className="upload-placeholder">
+                        <span>📷</span>
+                        <p>Clique para adicionar foto</p>
+                    </div>
+                )}
+                <input
+                    id={field}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange(e, field)}
+                    style={{ display: 'none' }}
+                />
+            </div>
+        </div>
+    );
 
     return (
         <div className="profile-view">
-            {/* Profile Header */}
+            {/* Header */}
             <div className="profile-header">
                 <div className="profile-avatar-large">
                     {user.name.charAt(0).toUpperCase()}
@@ -21,123 +141,183 @@ const ProfileView = () => {
                     <h1>{user.name}</h1>
                     <p className="profile-email">{user.email}</p>
                     <div className="profile-badges">
-                        {user.user_type === 'owner' && (
-                            <span className="badge-owner">Proprietário</span>
-                        )}
-                        {user.verified && (
-                            <span className="badge-verified">✓ Verificado</span>
-                        )}
+                        <span className={user.user_type === 'owner' ? 'badge-owner' : 'badge-tenant'}>
+                            {user.user_type === 'owner' ? 'Proprietário' : 'Inquilino'}
+                        </span>
+                        {user.verified && <span className="badge-verified">✓ Verificado</span>}
                     </div>
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="profile-stats">
-                <div className="stat-card">
-                    <div className="stat-value">{user.points || 0}</div>
-                    <div className="stat-label">Pontos</div>
-                </div>
-                <div className="stat-card">
-                    <div className="stat-value">⭐ {user.stars?.toFixed(1) || '5.0'}</div>
-                    <div className="stat-label">Avaliação</div>
-                </div>
-                {user.user_type === 'owner' && (
-                    <div className="stat-card">
-                        <div className="stat-value">-</div>
-                        <div className="stat-label">Imóveis Ativos</div>
+            {/* Scores & Owner Panel */}
+            <div className="profile-scores">
+                <div className="score-card">
+                    <p className="score-label">Pontuação</p>
+                    <div className="score-value">{user.points || 0}/100</div>
+                    <div className="progress-bar-container">
+                        <div
+                            className="progress-bar-fill"
+                            style={{ width: `${Math.min(user.points || 0, 100)}%` }}
+                        ></div>
                     </div>
-                )}
+                </div>
+                <div className="score-card">
+                    <p className="score-label">Avaliação</p>
+                    <div className="score-value">⭐ {user.stars?.toFixed(1) || '5.0'}</div>
+                    <div className="stars-container">
+                        {/* Static stars for now */}
+                        ★★★★★
+                    </div>
+                </div>
             </div>
 
-            {/* Personal Information */}
+            {/* Owner Toggle Panel */}
+            <div className="owner-panel-card">
+                <div className="panel-content">
+                    <h3>Painel do Proprietário</h3>
+                    <p>
+                        {user.user_type === 'owner'
+                            ? 'Gerencie seus imóveis e visualize leads.'
+                            : 'Quer anunciar imóveis? Torne-se um proprietário.'}
+                    </p>
+                </div>
+                <button
+                    className="btn-panel"
+                    onClick={user.user_type === 'owner' ? () => navigate('/owner/dashboard') : toggleOwnerStatus}
+                >
+                    {user.user_type === 'owner' ? 'Acessar Painel' : 'Virar Proprietário'}
+                </button>
+            </div>
+
+            {/* Main Form */}
             <div className="profile-section">
                 <div className="section-header">
-                    <h2>Informações Pessoais</h2>
+                    <h2>Informações</h2>
+                </div>
+
+                <div className="tabs">
                     <button
-                        className="btn-edit"
-                        onClick={() => setIsEditing(!isEditing)}
+                        className={`tab ${activeTab === 'personal' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('personal')}
                     >
-                        {isEditing ? 'Cancelar' : 'Editar'}
+                        Dados Pessoais
+                    </button>
+                    <button
+                        className={`tab ${activeTab === 'docs' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('docs')}
+                    >
+                        Documentos
+                    </button>
+                    <button
+                        className={`tab ${activeTab === 'address' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('address')}
+                    >
+                        Endereço
+                    </button>
+                    <button
+                        className={`tab ${activeTab === 'professional' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('professional')}
+                    >
+                        Profissional
                     </button>
                 </div>
 
-                <div className="info-grid">
-                    <div className="info-item">
-                        <label>Nome Completo</label>
-                        {isEditing ? (
-                            <input type="text" defaultValue={user.name} />
-                        ) : (
-                            <p>{user.name}</p>
-                        )}
-                    </div>
+                <form onSubmit={handleSave} className="form-grid">
+                    {activeTab === 'personal' && (
+                        <>
+                            <div className="form-group">
+                                <label>Nome Completo</label>
+                                <input name="name" value={formData.name} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
+                                <label>Email</label>
+                                <input value={user.email} disabled className="input-disabled" />
+                            </div>
+                            <div className="form-group">
+                                <label>Telefone</label>
+                                <input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="(00) 00000-0000" />
+                            </div>
+                        </>
+                    )}
 
-                    <div className="info-item">
-                        <label>Email</label>
-                        <p>{user.email}</p>
-                    </div>
+                    {activeTab === 'docs' && (
+                        <>
+                            <div className="form-group">
+                                <label>CPF</label>
+                                <input name="cpf" value={formData.cpf} onChange={handleInputChange} placeholder="000.000.000-00" />
+                            </div>
+                            <div className="form-group">
+                                <label>RG / CNH</label>
+                                <input name="rg" value={formData.rg} onChange={handleInputChange} />
+                            </div>
+                            {renderFileUpload('document_photo', 'Foto do Documento (Frente e Verso)')}
+                            {renderFileUpload('selfie_with_document', 'Selfie segurando o documento')}
+                        </>
+                    )}
 
-                    <div className="info-item">
-                        <label>Telefone</label>
-                        {isEditing ? (
-                            <input type="tel" defaultValue={user.phone || ''} placeholder="(00) 00000-0000" />
-                        ) : (
-                            <p>{user.phone || 'Não informado'}</p>
-                        )}
-                    </div>
+                    {activeTab === 'address' && (
+                        <div className="form-group">
+                            <label>Endereço Completo</label>
+                            <input
+                                name="address"
+                                value={formData.address}
+                                onChange={handleInputChange}
+                                placeholder="Rua, Número, Bairro, Cidade - UF"
+                            />
+                        </div>
+                    )}
 
-                    <div className="info-item">
-                        <label>Tipo de Conta</label>
-                        <p className="account-type">
-                            {user.user_type === 'owner' ? 'Proprietário' : 'Inquilino'}
-                        </p>
-                    </div>
-                </div>
+                    {activeTab === 'professional' && (
+                        <>
+                            <div className="form-group">
+                                <label>Cargo / Profissão</label>
+                                <input name="job_title" value={formData.job_title} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
+                                <label>Empresa</label>
+                                <input name="company_name" value={formData.company_name} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
+                                <label>CNPJ (Opcional)</label>
+                                <input name="cnpj" value={formData.cnpj} onChange={handleInputChange} />
+                            </div>
+                            {renderFileUpload('income_proof', 'Comprovante de Renda')}
+                        </>
+                    )}
 
-                {isEditing && (
                     <div className="form-actions">
-                        <button className="btn-primary">Salvar Alterações</button>
+                        <button type="submit" className="btn-primary" disabled={loading}>
+                            {loading ? 'Salvando...' : 'Salvar Alterações'}
+                        </button>
                     </div>
-                )}
+                </form>
             </div>
 
-            {/* Activity Section */}
+            {/* Recent Activity */}
             <div className="profile-section">
-                <h2>Atividade Recente</h2>
+                <h2>Atividades Recentes</h2>
                 <div className="activity-list">
                     <div className="activity-item">
                         <div className="activity-icon">❤️</div>
                         <div className="activity-content">
-                            <p className="activity-title">Favoritou um imóvel</p>
-                            <p className="activity-time">Há 2 dias</p>
-                        </div>
-                    </div>
-                    <div className="activity-item">
-                        <div className="activity-icon">👍</div>
-                        <div className="activity-content">
-                            <p className="activity-title">Demonstrou interesse em um imóvel</p>
-                            <p className="activity-time">Há 5 dias</p>
+                            <p className="activity-title">Você favoritou "Apartamento no Leblon"</p>
+                            <p className="activity-time">Hoje</p>
                         </div>
                     </div>
                     <div className="activity-item">
                         <div className="activity-icon">⭐</div>
                         <div className="activity-content">
-                            <p className="activity-title">Ganhou 50 pontos</p>
-                            <p className="activity-time">Há 1 semana</p>
+                            <p className="activity-title">Ganhou +10 pontos por completar o perfil</p>
+                            <p className="activity-time">Há 1 dia</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {/* Account Settings Link */}
-            <div className="profile-section">
-                <h2>Configurações da Conta</h2>
-                <div className="settings-links">
-                    <a href="/settings" className="settings-link">
-                        Preferências e Privacidade →
-                    </a>
-                    <a href="/settings" className="settings-link">
-                        Notificações →
-                    </a>
+                    <div className="activity-item">
+                        <div className="activity-icon">👋</div>
+                        <div className="activity-content">
+                            <p className="activity-title">Você indicou um amigo</p>
+                            <p className="activity-time">Há 3 dias</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -177,13 +177,29 @@ function initDatabase() {
         // Migration: Add user_type column if it doesn't exist
         try {
             const tableInfo = db.prepare("PRAGMA table_info(users)").all();
-            const hasUserType = tableInfo.some(col => col.name === 'user_type');
+            const existingColumns = tableInfo.map(col => col.name);
 
-            if (!hasUserType) {
-                console.log('🔄 Running migration: Adding user_type column...');
-                db.exec(`ALTER TABLE users ADD COLUMN user_type TEXT DEFAULT 'tenant'`);
-                console.log('✅ Migration completed: user_type column added');
-            }
+            const newColumns = [
+                { name: 'user_type', def: "TEXT DEFAULT 'tenant'" },
+                { name: 'cpf', def: "TEXT" },
+                { name: 'rg', def: "TEXT" },
+                { name: 'address', def: "TEXT" },
+                { name: 'job_title', def: "TEXT" },
+                { name: 'company_name', def: "TEXT" },
+                { name: 'cnpj', def: "TEXT" },
+                { name: 'income_proof', def: "TEXT" },
+                { name: 'document_photo', def: "TEXT" },
+                { name: 'selfie_with_document', def: "TEXT" }
+            ];
+
+            newColumns.forEach(col => {
+                if (!existingColumns.includes(col.name)) {
+                    console.log(`🔄 Running migration: Adding ${col.name} column...`);
+                    db.exec(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`);
+                    console.log(`✅ Migration completed: ${col.name} column added`);
+                }
+            });
+
         } catch (error) {
             console.error('❌ Migration error:', error.message);
         }

@@ -31,6 +31,12 @@ export const authApi = {
             method: 'POST',
             body: JSON.stringify({ name, email, password, user_type }),
         }),
+
+    updateProfile: (profileData) =>
+        apiRequest('/users/profile', {
+            method: 'PUT',
+            body: JSON.stringify(profileData),
+        }),
 };
 
 // Posts API
